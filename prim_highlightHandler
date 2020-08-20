@@ -1,0 +1,25 @@
+feed = game.StarterGui.feed.foundation.Folder
+board = game.StarterGui.board.foundation
+
+occupied = script.Parent.occupied.Value
+checkmate = script.Parent.checkmate.Value
+piece = script.Parent.piece.Value
+high_event = game.ReplicatedStorage.highlightEvent
+
+origColor = script.Parent.BackgroundColor3
+blue = Color3.fromRGB(113, 172, 217)
+red = Color3.fromRGB(138, 47, 47)
+
+
+high_event.Event:Connect(
+	function(x)
+		local a = x[1]
+		local b = x[2]
+		if(a == script.Parent.Name and b == 1) then
+			script.Parent.BackgroundColor3 = blue
+		elseif x[2] == 2 then
+			script.Parent.BackgroundColor3 = origColor
+		elseif a == script.Parent.Name and b == 3 then
+			script.Parent.BackgroundColor3 = red
+		end
+end)
