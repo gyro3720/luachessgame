@@ -1,0 +1,1088 @@
+feed = game.StarterGui.feed.foundation.Folder
+local feedEvent = game.ReplicatedStorage.feedEvent
+board = game.StarterGui.board.foundation
+
+occupied = script.Parent.occupied.Value
+checkmate = script.Parent.checkmate.Value
+piece = script.Parent.piece.Value
+high_event = game.ReplicatedStorage.highlightEvent
+
+white = Color3.fromRGB(217, 217, 217)
+green = Color3.fromRGB(93, 138, 74)
+blue = Color3.fromRGB(113, 172, 217)
+gold = Color3.fromRGB(218, 197, 78)
+red = Color3.fromRGB(138, 47, 47)
+
+origColor = script.Parent.BackgroundColor3
+
+offwhite = Color3.fromRGB(134, 134, 134)
+offgreen = Color3.fromRGB(45, 67, 36)
+
+selected = script.Parent.selected.Value
+danger = script.Parent.endangered.Value
+avail = script.Parent.available.Value
+
+alphabet = {"a","b","c","d","e","f","g","h"}
+whitepieces = {"w_pawn", "w_rook", "w_knight", "w_bishop",
+"w_king", "w_queen"}
+blackpieces = {"b_pawn", "b_rook", "b_knight", "b_bishop",
+"b_king", "b_queen"}
+
+--0 = w_pawn_unmoved
+--1 = w_pawn
+--2 = w_rook
+--3 = w_knight
+--4 = w_bishop
+--5 = w_king
+--6 = w_queen
+--7 = b_pawn
+--8 = b_rook
+--9 = b_knight
+--10 = b_bishop
+--11 = b_king
+--12 = b_queen
+
+--[[board_constructed = {}
+construct()
+print(board_constructed["b"])]]
+
+position = {string.sub(script.Parent.Name, 1, 1), string.sub(script.Parent.Name,2)}
+x = position[1]
+y = position[2]
+
+color = 0
+--1 is white
+--2 is green
+bgc = script.Parent.BackgroundColor3
+
+contendedPos = {}
+
+--[[high_event.Event:Connect(function(...) 
+	script.Parent.BorderSizePixel = 3
+end)]]
+
+function getColor(x1, y1)
+	local val = 0
+	for i, v in ipairs(alphabet) do
+		if alphabet[i] == x1 then
+			val = i
+		end
+	end
+	if(y1%2 ~= 0) then
+		if(val%2 ~= 0) then
+			color = 2
+		else
+			color = 1
+		end
+	else
+		if(val%2 ~= 0) then
+			color = 1
+		else
+			color = 2
+		end
+	end
+end
+
+getColor(x,y)
+
+
+
+script.Parent.MouseButton1Down:Connect(function()
+	local x = false
+	if danger then
+		script.Parent.piece.Value = board.Parent.piece.Value
+		
+		local cur_p = whitepieces[script.Parent.piece.Value]
+
+		newOutput = {
+		board.Parent.origPosition.Value, 
+		whitepieces[board.Parent.piece.Value], 
+		3, 
+		p_to_s(position), 
+		cur_p 
+		}
+		
+		updateFeed(newOutput)
+		x = true
+	else if avail then
+		script.Parent.piece.Value = board.Parent.piece.Value
+		
+		newOutput = {
+		board.Parent.origPosition.Value, 
+		whitepieces[board.Parent.piece.Value], 
+		2, 
+		p_to_s(position), 
+		}
+		
+		updateFeed(newOutput)
+		x = true
+	end
+	if not x then
+		clearBoard()
+		--event[6]=2 -> player
+		--event[6]=1 -> npc
+		if not selected then updateFeed({position, pieceString(piece), 1,"","",2}) end
+		if piece < 7 and piece > -1 then
+			if (selected) then
+				clearBoard()
+				selected = false
+				script.Parent.BorderSizePixel = 0		
+			else
+				if occupied ~= true then
+					selected = true
+					if (piece < 2) then
+						highlight_pawn(piece, position)
+						script.Parent.BackgroundColor3 = gold
+					else
+						highlight_gen(piece, position)
+						script.Parent.BackgroundColor3 = gold
+					end
+				else
+					--
+				end
+			end
+		end
+		end
+	end
+end)
+
+function clearBoard()
+	high_event:Fire({"",2})
+	for i, v in ipairs(board.positions:GetChildren()) do
+		local tempPos = {string.sub(v.Name, 1, 1), string.sub(v.Name,2)}
+		local tempColor = 0
+		--1 = white
+		--2 = green
+		tempColor = getColor(tempPos[1], tempPos[2])
+		--[[if tempColor == 1 then
+			v.BackgroundColor3 = Color3.fromRGB(217, 217, 217)
+			--v.Selected = false
+		else
+			v.BackgroundColor3 = Color3.fromRGB(93, 138, 74)
+			--v.Selected = false
+		end]]
+		v.BorderSizePixel = 0
+	end
+	board.Parent.piece.Value = 0
+	board.Parent.origPosition.Value = ""
+	contendedPos = {}
+end
+
+function ptov(x)
+	for i, v in ipairs(whitepieces) do
+		if whitepieces[i] == x then
+			return i
+		end
+	end
+	for i, v in ipairs(blackpieces) do
+		if blackpieces[i] == x then
+			return (i + 6)
+		end
+	end
+	return 0
+end 
+
+function highlight_pawn(pval, pos)
+	local xpos = 0
+	local ypos = pos[2]
+	for i, v in ipairs(alphabet) do
+		if alphabet[i] == pos[1] then
+			xpos = i
+		end
+	end
+	pval = piece
+	if pval == 0 then
+	--pawn_unmoved
+		if not checkfront(position) then
+			local temp_pos1 = p_to_s(oneup(position))
+				for i,v in ipairs(board.positions:GetChildren()) do
+					if v.Name == temp_pos1 then
+						high_event:Fire({v.Name, 1})
+						highlight_trouble()
+					end			
+				end
+				if not checkfront(oneup(position)) then
+					local temp_pos2 = p_to_s(oneup(oneup(position)))
+					for i,v in ipairs(board.positions:GetChildren()) do
+					if v.Name == temp_pos2 then
+						high_event:Fire({v.Name, 1})
+						highlight_trouble()
+					end			
+				end
+			end
+		end
+	elseif pval == 1 then
+		if not checkfront(position) then
+		local temp_pos1 = p_to_s(oneup(position))
+		for i,v in ipairs(board.positions:GetChildren()) do
+			if v.Name == temp_pos1 then
+				--openspots.insert(v.Name)
+				high_event:Fire({v.Name, 1})
+				highlight_trouble()
+			end			
+		end
+	end
+end
+end
+
+function highlight_king(pval, pos)
+	local opens = {}
+	local alph = pos[1]
+	local numb = pos[2]
+	if not oneup(pos).occupied.Value and not oneup(pos) == pos then
+		table.insert(opens, p_to_s(oneup()))
+	end
+	if not sideleft(pos).occupied.Value and not sideleft(pos) == pos then
+		table.insert(opens, p_to_s(sideleft()))
+	elseif not sideleft(pos) == pos and sideleft(pos) then
+		table.insert(contendedPos, sideleft(pos))
+	end
+  	if not sideright(pos).occupied.Value and not sideright(pos) == pos then
+		table.insert(opens, p_to_s(sideright()))
+	elseif not sideright(pos) == pos and sideright(pos) then
+		table.insert(contendedPos, sideright(pos))
+	end
+	if not downleft(pos).occupied.Value and not downleft(pos) == pos then
+		table.insert(opens, p_to_s(downleft()))
+	elseif not downleft(pos) == pos and downleft(pos) then
+		table.insert(contendedPos, downleft(pos))
+	end
+	if not downright(pos).occupied.Value and not downright(pos) == pos then
+		table.insert(opens, p_to_s(downright()))
+	elseif not downright(pos) == pos and downright(pos) then
+		table.insert(contendedPos, downright(pos))
+	end
+	if not upright(pos).occupied.Value and not upright(pos) == pos then
+		table.insert(opens, p_to_s(upright()))
+	elseif not upright(pos) == pos and upright(pos) then
+		table.insert(contendedPos, upright(pos))
+	end
+	if not upleft()(pos).occupied.Value and not upleft(pos) == pos then
+		table.insert(opens, p_to_s(upleft()))
+	elseif not upleft(pos) == pos and upleft(pos) then
+		table.insert(contendedPos, upleft(pos))
+	end
+	if not onedown(pos).occupied.Value and not onedown(pos) == pos then
+		table.insert(opens, p_to_s(onedown()))
+	elseif not onedown(pos) == pos and onedown(pos) then
+		table.insert(contendedPos, onedown(pos))
+	end
+end
+
+function highlight_gen(pval, pos)
+	if pval == 2 then
+	--rook
+		local n = tonumber(pos[2])
+		local n1 = tonumber(pos[2])
+		local n2
+		local n3
+		for i, v in ipairs(alphabet) do
+			if(pos[1] == alphabet[i]) then
+				n2 = i
+				n3 = i
+			end
+		end
+		while n < 9 do
+			if not checkfront(val_to_pos(pos[1], n)) then
+				local temp_pos1 = p_to_s(oneup(val_to_pos(pos[1], n)))
+				high_event:Fire({temp_pos1, 1})
+				n = n+1
+			else
+				break
+			end
+		end
+		while n1 > 0 do
+			if not checkback(val_to_pos(pos[1], n1)) then
+				local temp_pos1 = p_to_s(onedown(val_to_pos(pos[1], n1)))
+				high_event:Fire({temp_pos1, 1})
+				n1 = n1-1
+			else
+				break
+			end
+		end
+		while n2 < 9 do
+			if not checkright(val_to_pos(alphabet[n2], pos[2])) then
+				local temp_pos1 = p_to_s(sideright(val_to_pos(alphabet[n2], pos[2])))
+				high_event:Fire({temp_pos1, 1})
+				n2 = n2+1
+			end
+		end
+		while n3 > 0 do
+			if not checkleft((val_to_pos(alphabet[n3], pos[2]))) then
+				local temp_pos1 = p_to_s(sideleft(val_to_pos(alphabet[n3], pos[2])))
+				high_event:Fire({temp_pos1, 1})
+				n3 = n3-1
+			end
+		end
+		highlight_trouble()
+	else if pval == 3 then
+			--n = num (a = 1)
+			--n2 = alphabet
+			local n = tonumber(pos[2])
+			local n2
+			for i, v in ipairs(alphabet) do
+				if alphabet[i] == pos[1] then
+					n2 = i
+				end
+			end
+			--front right1
+			if n < 7 and n2 < 8 then
+				local tempnum = n+2
+				local templet = n2 + 1
+				local temppos = val_to_pos(alphabet[templet], tempnum)
+				if not checkposition(temppos) then
+				--	high_event:Fire({val_to_pos(alphabet[n2+1], n), 1})
+				--	high_event:Fire({val_to_pos(alphabet[n2+2], n), 1})
+				--	high_event:Fire({val_to_pos(alphabet[n2+3], n), 1})
+					high_event:Fire({p_to_s(temppos), 1})
+					print(contendedPos[1])
+				end
+			end
+			--front right2
+			if n < 8 and n2 < 7 then
+				local tempnum = n + 1
+				local templet = n2 + 2
+				local temppos = val_to_pos(alphabet[templet], tempnum)
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos), 1})
+				end
+			end
+			--front left1
+			if n > 2 and n2 < 8 then
+				local tempnum = n-2
+				local templet = n2 + 1
+				local temppos = val_to_pos(alphabet[templet], tempnum)
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos), 1})
+					print(contendedPos[1])
+				end
+			end
+			--front left2
+			if n > 1 and n2 < 7 then
+				local tempnum = n-1
+				local templet = n2 + 2
+				local temppos = val_to_pos(alphabet[templet], tempnum)
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos), 1})
+					print(contendedPos[1])
+				end
+			end
+			-- back right1
+			if n > 2 and n2 < 8 then
+				local tempnum = n - 2
+				local templet = n2 + 1
+				local temppos = val_to_pos(alphabet[templet], tempnum)
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos), 1})
+				end
+			end
+			--back right2
+			if n < 8 and n2 < 7 then
+				local tempnum = n - 1
+				local templet = n2 + 2
+				local temppos = val_to_pos(alphabet[templet], tempnum)
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos), 1})
+				end
+			end
+			-- back left1
+			-- back left2
+			highlight_trouble()
+		else if pval == 4 then
+			local alpha
+			local num = tonumber(pos[2])
+			for i, v in ipairs(alphabet) do
+				if alphabet[i] == pos[1] then
+					alpha = i
+				end
+			end
+			--front right
+			local alpha_1 = alpha
+			local num_1 = num
+ 			while alpha_1 < 8 and num_1 < 8
+			do
+				local tempx = alphabet[alpha_1 + 1]
+				local tempy = num_1 + 1
+				local temppos = val_to_pos(tempx,tempy)
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})
+					else
+					alpha_1 = 8
+				end
+				alpha_1 = alpha_1 + 1
+				num_1 = num_1 + 1
+			end
+			--front left
+			local alpha_2 = alpha
+			local num_2 = num
+			while alpha_2 > 1 and num_2 < 8 do
+				local tempx = alphabet[alpha_2 - 1]
+				local tempy = num_2 + 1
+				local temppos = val_to_pos(tempx,tempy)
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})
+					else
+					alpha_2 = 1
+				end
+				alpha_2 = alpha_2 - 1
+				num_2 = num_2 + 1
+			end
+			--back right
+			local alpha_3 = alpha
+			local num_3 = num
+			while alpha_3 < 8 and num_3 > 1 do
+				local tempx = alphabet[alpha_3 + 1]
+				local tempy = num_3 - 1
+				local temppos = val_to_pos(tempx,tempy)
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})
+					else
+					alpha_3 = 8
+				end
+				alpha_3 = alpha_3 + 1
+				num_3 = num_3 - 1
+			end
+			--back left
+			local alpha_4 = alpha
+			local num_4 = num
+			while alpha_4 > 1 and num_4 > 1 do
+				local tempx = alphabet[alpha_4 - 1]
+				local tempy = num_4 - 1
+				local temppos = val_to_pos(tempx, tempy)
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})
+					else
+					alpha_4 = 1
+				end
+				alpha_4 = alpha_4 - 1
+				num_4 = num_4 - 1
+			end
+			highlight_trouble()
+		else if pval == 5 then
+			local alpha
+			local num = tonumber(pos[2])
+			for i, v in ipairs(alphabet) do
+				if alphabet[i] == pos[1] then
+					alpha = i
+				end
+			end
+			--front row
+			local alpha_1 = alpha
+			local num_1 = num
+			--normal
+			if alpha > 1 and alpha < 8 then
+				if num < 8 and num > 1 then
+					fullking(alpha_1, num_1)
+				end
+			else if alpha == 1 and num < 8 and num > 1 then
+				local temppos = val_to_pos(alphabet[alpha_1], num_1 + 1)
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})
+				end
+				temppos = val_to_pos(alphabet[alpha_1], num_1 - 1)
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})
+				end
+				temppos = val_to_pos(alphabet[alpha_1 + 1], num_1)
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})
+				end
+				temppos = val_to_pos(alphabet[alpha_1 + 1], num_1 - 1)
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})
+				end
+				temppos = val_to_pos(alphabet[alpha_1 + 1], num_1 + 1)
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})
+				end
+			else if alpha == 8 and num < 8 and num > 1 then
+				local temppos = val_to_pos(alphabet[alpha_1], num_1 + 1)
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})
+				end
+				temppos = val_to_pos(alphabet[alpha_1], num_1 - 1)
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})
+				end
+				temppos = val_to_pos(alphabet[alpha_1 - 1], num_1)
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})
+				end
+				temppos = val_to_pos(alphabet[alpha_1 - 1], num_1 - 1)
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})
+				end
+				temppos = val_to_pos(alphabet[alpha_1 - 1], num_1 + 1)
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})
+			else if num == 1 and alpha > 1 and alpha < 8 then
+				local temppos = val_to_pos(alphabet[alpha_1], num_1 + 1)
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})
+				end
+				temppos = val_to_pos(alphabet[alpha_1 + 1], num_1 + 1)
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})
+				end
+				temppos = val_to_pos(alphabet[alpha_1 - 1], num_1 + 1)
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})
+				end
+				temppos = val_to_pos(alphabet[alpha_1 - 1], num_1)
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})
+				end
+				temppos = val_to_pos(alphabet[alpha_1 - 1], num_1)
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})	
+				end
+			else if num == 8 and alpha > 1 and alpha < 8 then
+				local temppos = val_to_pos(alphabet[alpha_1], num_1 - 1)
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})
+				end
+				temppos = val_to_pos(alphabet[alpha_1 + 1], num_1 - 1)
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})
+				end
+				temppos = val_to_pos(alphabet[alpha_1 - 1], num_1 - 1)
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})
+				end
+				temppos = val_to_pos(alphabet[alpha_1 - 1], num_1)
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})
+				end
+				temppos = val_to_pos(alphabet[alpha_1 - 1], num_1)
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})	
+				end
+			else if num == 8 and alpha == 8 then
+				local temppos = val_to_pos(alphabet[alpha_1], num_1 - 1)	
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})	
+				end
+				temppos = val_to_pos(alphabet[alpha_1 - 1], num_1 - 1)	
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})	
+				end
+				temppos = val_to_pos(alphabet[alpha_1 - 1], num_1)	
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})	
+				end
+			else if num == 1 and alpha == 1 then
+				local temppos = val_to_pos(alphabet[alpha_1], num_1 + 1)	
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})	
+				end
+				temppos = val_to_pos(alphabet[alpha_1 + 1], num_1 + 1)	
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})	
+				end
+				temppos = val_to_pos(alphabet[alpha_1 + 1], num_1)	
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})	
+				end
+			else if num == 1 and alpha == 8 then
+				local temppos = val_to_pos(alphabet[alpha_1], num_1 + 1)	
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})	
+				end
+				temppos = val_to_pos(alphabet[alpha_1 - 1], num_1 + 1)	
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})	
+				end
+				temppos = val_to_pos(alphabet[alpha_1 - 1], num_1)	
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})	
+				end
+			else if num == 8 and alpha == 1 then
+				local temppos = val_to_pos(alphabet[alpha_1], num_1 - 1)	
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})	
+				end
+				temppos = val_to_pos(alphabet[alpha_1 + 1], num_1 - 1)	
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})	
+				end
+				temppos = val_to_pos(alphabet[alpha_1 + 1], num_1)	
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})	
+				end
+			end
+			end
+			end
+			end
+			end
+			end	
+			end
+			end
+			end
+			highlight_trouble()
+		end
+		else if pval == 6 then
+			local n = tonumber(pos[2])
+			local n1 = tonumber(pos[2])
+			local n2
+			local n3
+			for i, v in ipairs(alphabet) do
+				if(pos[1] == alphabet[i]) then
+					n2 = i
+					n3 = i
+				end
+			end
+			while n < 9 do
+				if not checkfront(val_to_pos(pos[1], n)) then
+					local temp_pos1 = p_to_s(oneup(val_to_pos(pos[1], n)))
+					high_event:Fire({temp_pos1, 1})
+					n = n+1
+				else
+					break
+				end
+			end
+			while n1 > 0 do
+				if not checkback(val_to_pos(pos[1], n1)) then
+					local temp_pos1 = p_to_s(onedown(val_to_pos(pos[1], n1)))
+					high_event:Fire({temp_pos1, 1})
+					n1 = n1-1
+				else
+					break
+				end
+			end
+			while n2 < 9 do
+				if not checkright(val_to_pos(alphabet[n2], pos[2])) then
+					local temp_pos1 = p_to_s(sideright(val_to_pos(alphabet[n2], pos[2])))
+					high_event:Fire({temp_pos1, 1})
+					n2 = n2+1
+				end
+			end
+			while n3 > 0 do
+				if not checkleft((val_to_pos(alphabet[n3], pos[2]))) then
+					local temp_pos1 = p_to_s(sideleft(val_to_pos(alphabet[n3], pos[2])))
+					high_event:Fire({temp_pos1, 1})
+					n3 = n3-1
+				end
+			end
+			local alpha
+			local num = tonumber(pos[2])
+			for i, v in ipairs(alphabet) do
+				if alphabet[i] == pos[1] then
+					alpha = i
+				end
+			end
+			--front right
+			local alpha_1 = alpha
+			local num_1 = num
+ 			while alpha_1 < 8 and num_1 < 8
+			do
+				local tempx = alphabet[alpha_1 + 1]
+				local tempy = num_1 + 1
+				local temppos = val_to_pos(tempx,tempy)
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})
+					else
+					alpha_1 = 8
+				end
+				alpha_1 = alpha_1 + 1
+				num_1 = num_1 + 1
+			end
+			--front left
+			local alpha_2 = alpha
+			local num_2 = num
+			while alpha_2 > 1 and num_2 < 8 do
+				local tempx = alphabet[alpha_2 - 1]
+				local tempy = num_2 + 1
+				local temppos = val_to_pos(tempx,tempy)
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})
+					else
+					alpha_2 = 1
+				end
+				alpha_2 = alpha_2 - 1
+				num_2 = num_2 + 1
+			end
+			--back right
+			local alpha_3 = alpha
+			local num_3 = num
+			while alpha_3 < 8 and num_3 > 1 do
+				local tempx = alphabet[alpha_3 + 1]
+				local tempy = num_3 - 1
+				local temppos = val_to_pos(tempx,tempy)
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})
+					else
+					alpha_3 = 8
+				end
+				alpha_3 = alpha_3 + 1
+				num_3 = num_3 - 1
+			end
+			--back left
+			local alpha_4 = alpha
+			local num_4 = num
+			while alpha_4 > 1 and num_4 > 1 do
+				local tempx = alphabet[alpha_4 - 1]
+				local tempy = num_4 - 1
+				local temppos = val_to_pos(tempx, tempy)
+				if not checkposition(temppos) then
+					high_event:Fire({p_to_s(temppos),1})
+					else
+					alpha_4 = 1
+				end
+				alpha_4 = alpha_4 - 1
+				num_4 = num_4 - 1
+			end
+			highlight_trouble()
+		end
+		end
+		end
+		end
+	end
+end
+
+function val_to_pos(x, y)
+	return {x, y}
+end
+
+function checkfront(pos)
+	local xpos = 0
+	local ypos = pos[2]
+	for i, v in ipairs(alphabet) do
+		if alphabet[i] == pos[1] then
+			xpos = i
+		end
+	end
+	if tonumber(ypos) then
+		local ytemp = ypos + 1
+		local concat_temp = alphabet[xpos] .. tostring(ytemp)
+		for i, v in ipairs(board.positions:GetChildren()) do
+			if v.Name == concat_temp then
+				if v.occupied.value == true then
+					table.insert(contendedPos, val_to_pos(alphabet[xpos], ytemp))
+					return true
+				else
+					return false
+				end
+			end
+		end
+	end
+	return false
+end
+
+function checkback(pos)
+	local xpos = 0
+	local ypos = pos[2]
+	for i, v in ipairs(alphabet) do
+		if alphabet[i] == pos[1] then
+			xpos = i
+		end
+	end
+	if tonumber(ypos) then
+		local ytemp = ypos - 1
+		local concat_temp = alphabet[xpos] .. tostring(ytemp)
+		for i, v in ipairs(board.positions:GetChildren()) do
+			if v.Name == concat_temp then
+				if v.occupied.Value == true then
+					table.insert(contendedPos, val_to_pos(alphabet[xpos], ytemp))
+					return true
+				else
+					
+					return false
+				end
+			end
+		end
+	end
+	return false
+end
+
+function checkposition(pos)
+	local xpos
+	local ypos = pos[2]
+	for i, v in ipairs(board.positions:GetChildren()) do
+		if v.Name == p_to_s(pos) then
+			if v.occupied.Value then
+				table.insert(contendedPos, pos)
+				return true
+			else return false
+			end
+		end
+	end
+end
+
+function checkright(pos)
+	local xpos = 0
+	local ypos = pos[2]
+	for i, v in ipairs(alphabet) do
+		if alphabet[i] == pos[1] then
+			xpos = i
+		end
+	end
+	if xpos < 8 then
+		local concat_temp = alphabet[xpos + 1] .. tostring(ypos) 
+		for i, v in ipairs(board.positions:GetChildren()) do
+			if v.Name == concat_temp then
+				if v.occupied.Value == true then
+					table.insert(contendedPos, val_to_pos(alphabet[xpos + 1], ypos))
+					return true
+				else
+					return false
+				end
+			end
+		end
+	end
+	return false
+end
+
+function checkleft(pos)
+	local xpos = 0
+	local ypos = pos[2]
+	for i, v in ipairs(alphabet) do
+		if alphabet[i] == pos[1] then
+			xpos = i
+		end
+	end
+	if xpos > 1 then
+		local concat_temp = alphabet[xpos - 1] .. tostring(ypos) 
+		for i, v in ipairs(board.positions:GetChildren()) do
+			if v.Name == concat_temp then
+				if v.occupied.Value == true then
+					table.insert(contendedPos, val_to_pos(alphabet[xpos - 1], ypos))
+					return true
+				else
+					return false
+				end
+			end
+		end
+	end
+	return false
+end
+
+
+--[[]function construct()
+	local tempDict = {}
+	for i, v in ipairs(board.positions:GetChildren()) do
+		local pos = {string.sub(v.Name, 1, 1), string.sub(v.Name,2)}
+		local xpos = pos[1]
+		local ypos = pos[2]
+		--[for j, z in ipairs(alphabet) do
+			--if alphabet[j] == pos[1] then
+				--xpos = j
+			--end
+		--end
+		if not tempDict[xpos] then
+			tempDict[xpos] = {1,2,3,4,5,6,7,8}
+		end
+	end
+	board_constructed = tempDict
+end]]
+
+function findpiece(posx, posy)
+	for i, v in ipairs(board.positions:GetChildren()) do
+		local temp = string.sub(v.Name, 1, 1)
+		local temp2 = 0
+		for x, y in ipairs(alphabet) do
+			if alphabet[x] == temp then
+				temp2 = x
+			end
+		end
+		if posx == temp2 and posy == tonumber(string.sub(v.Name, 2)) then
+			return v.occupied.Value	
+		end
+	end
+	return false
+end
+
+function oneup(pos)
+	if tonumber(pos[2]) < 8 then
+		return {pos[1], (tonumber(pos[2]) + 1)}
+	else
+		return pos
+	end
+end
+
+function onedown(pos)
+	if tonumber(pos[2]) > 0 then
+		return {pos[1], (tonumber(pos[2]) - 1)}
+	else
+		return pos
+	end
+end
+
+function sideright(pos)
+	local x
+	for i, v in ipairs(alphabet) do
+		if alphabet[i] == pos[1] then
+			x = i
+		end
+	end
+	if x < 8 then
+		return {alphabet[x+1],pos[2]}
+	else
+		return pos
+	end 
+end
+
+function sideleft(pos)
+	local x
+	for i, v in ipairs(alphabet) do
+		if alphabet[i] == pos[1] then
+			x = i
+		end
+	end
+	if x > 1 then
+		return {alphabet[x-1],pos[2]}
+	else
+		return pos
+	end 
+end
+
+function upright(pos)
+	local xtemp = 0
+	for i, v in ipairs(alphabet) do
+		if alphabet[i] == pos[1] then
+			xtemp = i
+		end
+	end
+	if xtemp < 8 and tonumber(pos[2]) < 2 then
+		return {alphabet[xtemp + 1], tonumber(pos[2]) + 1}
+	else
+		return pos
+	end
+end
+
+function upleft(pos)
+	local xtemp = 0
+	for i, v in ipairs(alphabet) do
+		if alphabet[i] == pos[1] then
+			xtemp = i
+		end
+	end
+	if xtemp > 1 and tonumber(pos[2]) < 8 then
+		return {alphabet[xtemp - 1], tonumber(pos[2]) + 1}
+	else
+		return pos
+	end
+end
+
+function downleft(pos)
+	local xtemp = 0
+	for i, v in ipairs(alphabet) do
+		if alphabet[i] == pos[1] then
+			xtemp = i
+		end
+	end
+	if xtemp > 1 and tonumber(pos[2]) > 1 then
+		return {alphabet[xtemp - 1], tonumber(pos[2]) - 1}
+	else
+		return pos
+	end
+end
+
+function downright(pos)
+	local xtemp = 0
+	for i, v in ipairs(alphabet) do
+		if alphabet[i] == pos[1] then
+			xtemp = i
+		end
+	end
+	if xtemp < 8 and tonumber(pos[2]) > 1 then
+		return {alphabet[xtemp + 1], tonumber(pos[2]) - 1}
+	else
+		return pos
+	end
+end
+
+function p_to_s(pos)
+	return pos[1] .. pos[2]
+end
+
+function highlight_trouble()
+	for i, v in ipairs(contendedPos) do
+		for x, y in ipairs(board.positions:GetChildren()) do
+			local temp_name = p_to_s(contendedPos[i])
+			if temp_name == y.Name then
+				high_event:Fire({temp_name, 3})
+			end
+		end
+	end
+end
+
+high_event.Event:Connect(
+	function(x)
+		local a = x[1]
+		local b = x[2]
+		if(a == script.Parent.Name and b == 1) then
+			script.Parent.BackgroundColor3 = blue
+		elseif x[2] == 2 then
+			script.Parent.BackgroundColor3 = origColor
+		elseif a == script.Parent.Name and b == 3 then
+			script.Parent.BackgroundColor3 = red
+		end
+end)
+
+function updateFeed(event)
+	--[[
+	event[1] = original position
+	event[2] = selected piece
+	event[3] = action type (1-selected//2-moved//3-captured)
+	*event[4] = new position
+	*event [5] = piece captured 
+	]]
+	feedEvent:Fire(event)
+end
+
+--0 = w_pawn_unmoved
+--1 = w_pawn
+--2 = w_rook
+--3 = w_knight
+--4 = w_bishop
+--5 = w_king
+--6 = w_queen
+--7 = b_pawn
+--8 = b_rook
+--9 = b_knight
+--10 = b_bishop
+--11 = b_king
+--12 = b_queen
+function pieceString(x)
+	if x < 7 then
+		return whitepieces[x]
+	else
+		y = x-6
+		return blackpieces[y]
+	end
+end
+
+function fullking(x, y)
+	local temppos = val_to_pos(alphabet[x - 1], y + 1)
+	if not checkposition(temppos) then
+		high_event:Fire({p_to_s(temppos),1})
+	end
+	temppos = val_to_pos(alphabet[x], y + 1)
+	if not checkposition(temppos) then
+		high_event:Fire({p_to_s(temppos),1})
+	end
+	temppos = val_to_pos(alphabet[x + 1], y + 1)
+	if not checkposition(temppos) then
+		high_event:Fire({p_to_s(temppos),1})
+	end
+	temppos = val_to_pos(alphabet[x - 1], y - 1)
+	if not checkposition(temppos) then
+		high_event:Fire({p_to_s(temppos),1})
+	end
+	temppos = val_to_pos(alphabet[x], y - 1)
+	if not checkposition(temppos) then
+		high_event:Fire({p_to_s(temppos),1})
+	end
+	temppos = val_to_pos(alphabet[x + 1], y - 1)
+	if not checkposition(temppos) then
+		high_event:Fire({p_to_s(temppos),1})
+	end
+	temppos = val_to_pos(alphabet[x + 1], y)
+	if not checkposition(temppos) then
+		high_event:Fire({p_to_s(temppos),1})
+	end
+	temppos = val_to_pos(alphabet[x - 1], y)
+	if not checkposition(temppos) then
+		high_event:Fire({p_to_s(temppos),1})
+	end
+end
