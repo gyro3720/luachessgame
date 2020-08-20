@@ -1,0 +1,134 @@
+local feed = script.Parent.foundation.Folder
+local feedEvent = game.ReplicatedStorage.feedEvent
+local altHighlight = game.ReplicatedStorage.altHighlight
+
+--[[
+	event[1] = original position
+	event[2] = selected piece
+	event[3] = action type (selected//moved//captured)
+	*event[4] = new position
+	*event [5] = piece captured 
+	]]	
+feedEvent.Event:Connect(function(event)
+	if(event[1]) then
+		local newEvent = ""
+		local position1 = p_to_s(event[1])
+		local position2
+		if(event[4]) then
+			print(tostring(event[4]))
+			position2 = p_to_s(event[4])
+		end
+		if event[3] == 1 then
+			newEvent = event[2] .. " at " .. position1 .. " selected"
+		elseif event[3] == 2 then
+			newEvent = event[2] .. " from " .. position1 .. " to " .. position2
+		elseif event[3] == 3 then
+			newEvent = event[2] .. " from " .. position1 .. " captured " .. event[5] .. " at " .. position2
+		elseif event[3] == 4 then
+		end
+		local col
+		updateBoard2(newEvent, event[6])
+	end
+end)
+
+function updateBoard(x, col)
+	local iterator = 2
+	local tempString1 = ""
+	local tempString2 = ""
+	for i, v in ipairs(feed:GetChildren()) do
+		tempString1 = tempString2
+		if v.val.Value == 1 then
+			tempString1 = v.Text
+			update(v.val.Value, x, col)
+		else
+			if v.val.Value == iterator then
+				tempString2 = v.Text
+				print(tempString1 .. "abc")
+			    update(v.val.Value, tempString1, col)
+				iterator = iterator + 1			
+			end
+		end
+	end
+end
+
+function updateBoard2(x, col)
+	local text = x
+	local textFeed = {x}
+	local colTab = {col}
+	
+	for i, v in ipairs(feed:GetChildren()) do
+		table.insert(textFeed, v.Text)
+		if v.TextColor3 == Color3.fromRGB(255,255,255) then
+			table.insert(colTab, 1)
+		elseif v.TextColor3 == Color3.fromRGB(0,0,0) then
+			table.insert(colTab, 2)
+		end
+	end
+	
+	for i, v in ipairs(feed:GetChildren()) do
+		--if not textFeed[i] == "" then
+			--print(i)
+			if v.val.Value == i then
+				update(i, textFeed[i], colTab[i])
+			end
+		--else
+			--update(i, "")
+		--end
+	end
+end
+
+function easyClear()
+	for i, v in ipairs(feed:GetChildren()) do
+		update(v.val.Value, "")
+	end
+end
+
+--[[function funClear()
+	local y = 1
+	while y < 19 do
+		for i, v in ipairs(feed:GetChildren()) do
+			if v.val == y then
+				local x = 0
+				while(x < 20) do
+					v.Text = v.Text .. "-"
+					wait(.01)
+					x = x + 1
+				end
+			end
+		end
+		y = y+1
+	end
+	y = 19
+	while y > 0 do
+		for i, v in ipairs(feed:GetChildren()) do
+			if v.val == y then
+				local x = 20
+				while x > 0 do
+					v.Text = numDash(x)
+					wait(.01)
+					x = x-1
+				end
+			end
+		end
+		y = y-1
+	end
+end
+
+function numDash(x)
+	local toReturn = ""
+	local y = x
+	while y > 0 do
+		toReturn = toReturn .. '-'
+		y = y-1
+	end
+end]]
+
+function p_to_s(pos)
+	if pos[1] and pos[2] then
+		return pos[1] .. pos[2]
+	end
+end
+
+function update(pos, x, col)
+	altHighlight:Fire({pos, x, col})
+end
